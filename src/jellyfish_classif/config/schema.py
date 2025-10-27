@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Dict, List, Tuple
 
 
 @dataclass
@@ -36,3 +36,4 @@ class DownloadConfig:
     per_page: int = 50
     api_sleep_time: int = 2
     image_size: str = "medium"  # square, small, medium, large, original
+    species: List[Dict[str, str | int]] | None = None

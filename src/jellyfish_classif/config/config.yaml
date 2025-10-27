@@ -25,3 +25,19 @@ download:
   per_page: 50
   api_sleep_time: 2
   image_size: "medium"
+  species:
+    - name: "Aurelia aurita"
+      preferred_common_name: "Common Moon Jelly"
+      taxon_id: 48328
+    - name: "Pelagia noctiluca"
+      preferred_common_name: "Mauve Stinger"
+      taxon_id: 256089
+    - name: "Chrysaora hysoscella"
+      preferred_common_name: "Compass Jelly"
+      taxon_id: 360314
+    - name: "Cotylorhiza tuberculata"
+      preferred_common_name: "Fried Egg Jelly"
+      taxon_id: 324852
+    - name: "Rhizostoma pulmo"
+      preferred_common_name: "Barrel Jelly"
+      taxon_id: 319371
