@@ -1,6 +1,5 @@
 from typing import Dict, Any
 from pathlib import Path
-import csv
 from time import sleep
 from tqdm import tqdm
 
@@ -11,12 +10,11 @@ from config import Config
 download_config = Config().download
 
 
-def download_species_images(species: Dict[str, Any], writer: csv.writer) -> None:
-    """Downloads images for a given species and writes metadata to CSV.
+def download_species_images(species: Dict[str, Any]) -> None:
+    """Downloads images for a given species.
 
     Args:
         species (Dict[str, Any]): Species information dictionary
-        writer (csv.writer): CSV writer object
     """
     sci_name = species["name"]
     taxon_id = species["taxon_id"]
@@ -46,8 +44,6 @@ def download_species_images(species: Dict[str, Any], writer: csv.writer) -> None
                 downloaded = observation.process_observation(
                     obs,
                     species_dir,
-                    writer,
-                    species,
                     downloaded,
                     download_config.max_images_per_species,
                     download_config.image_size,
@@ -59,7 +55,7 @@ def download_species_images(species: Dict[str, Any], writer: csv.writer) -> None
             page += 1
             sleep(download_config.api_sleep_time)
 
-    print(f"{downloaded} images téléchargées pour {sci_name}")
+    print(f"{downloaded} images downloaded for {sci_name}")
 
 
 def download_all_species() -> None:
@@ -77,38 +73,8 @@ def download_all_species() -> None:
     for species in tqdm(species_list, desc="Species"):
         sci_name = species["name"]
         species_dir = images_dir / sci_name.replace(" ", "_")
-        species_dir.mkdir(parents=True, exist_ok=True)
-        downloaded = 0
-        page = 1
+        if species_dir.exists() and any(species_dir.glob("*.jpg")):
+            print(f"Dataset already exists for {sci_name}, skipping download.")
+            continue
 
-        with tqdm(
-            total=download_config.max_images_per_species,
-            desc=f"{sci_name}",
-            leave=False,
-        ) as pbar:
-            while downloaded < download_config.max_images_per_species:
-                observations = api.fetch_observations(
-                    species["taxon_id"],
-                    page,
-                    download_config.per_page,
-                )
-                if not observations:
-                    break
-
-                for obs in observations:
-                    downloaded = observation.process_observation(
-                        obs,
-                        species_dir,
-                        species,
-                        downloaded,
-                        download_config.max_images_per_species,
-                        download_config.image_size,
-                    )
-                    pbar.update(1)
-                    if downloaded >= download_config.max_images_per_species:
-                        break
-
-                page += 1
-                sleep(download_config.api_sleep_time)
-
-        print(f"{downloaded} images téléchargées pour {sci_name}")
+        download_species_images(species)

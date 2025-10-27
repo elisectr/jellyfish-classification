@@ -1,13 +1,14 @@
 import requests
 
 
-def fetch_observations(taxon_id: int, page_number: int, images_per_page) -> list:
+def fetch_observations(taxon_id: int, page_number: int, images_per_page: int) -> list:
     """
     Fetches observations for a given taxon ID and page from the iNaturalist API.
 
     Args:
         taxon_id (int): The taxon ID to query.
         page_number (int): The page number for pagination.
+        images_per_page (int): Number of images to fetch per page.
 
     Returns:
         list: A list of observation dictionaries.
@@ -28,5 +29,5 @@ def fetch_observations(taxon_id: int, page_number: int, images_per_page) -> list
     if response.status_code == 200:
         return response.json().get("results", [])
     else:
-        print(f"Erreur API (taxon {taxon_id}, page {page_number})")
+        print(f"API error (taxon {taxon_id}, page {page_number})")
         return []
