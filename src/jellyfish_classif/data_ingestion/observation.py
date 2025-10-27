@@ -2,6 +2,7 @@ from typing import Dict, Any
 from pathlib import Path
 
 from jellyfish_classif.data_ingestion.utils import download_image
+from jellyfish_classif.data_ingestion.utils import check_image
 
 
 def process_observation(
@@ -39,7 +40,17 @@ def process_observation(
 
         if filepath.exists():
             continue  # Skip if already downloaded
-        elif download_image(img_url, filepath):
+
+        if download_image(img_url, filepath):
+            # Check if the image is valid
+            if not check_image(filepath):
+                try:
+                    filepath.unlink()
+                    print(f"Removed invalid image: {filepath.name}")
+                except Exception as e:
+                    print(f"Failed to remove invalid image {filepath}: {e}")
+                continue
+
             downloaded += 1
             if downloaded >= max_images:
                 break
