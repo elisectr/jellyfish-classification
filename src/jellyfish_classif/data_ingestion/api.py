@@ -30,5 +30,3 @@ def fetch_observations(taxon_id: int, page_number: int, images_per_page) -> list
     else:
         print(f"Erreur API (taxon {taxon_id}, page {page_number})")
         return []
-
-    # TODO: yaml plutot que json pr la config de la liste des especes
