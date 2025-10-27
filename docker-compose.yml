@@ -1,7 +1,7 @@
 services:
-  jellyfish-classifier:
-    image: jellyfish-classifier:latest
-    container_name: tensorflow_jupyter_uv
+  jellyfish-classif:
+    image: jellyfish-classif:latest
+    container_name: notebook-jellyfish-classif
 
     deploy:
       resources:
