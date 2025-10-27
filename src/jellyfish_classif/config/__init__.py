@@ -1,3 +1,3 @@
-from config.parser import Config
+from .parser import Config
 
 __all__ = ["Config"]

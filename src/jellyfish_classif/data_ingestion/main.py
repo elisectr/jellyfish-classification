@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 
 from jellyfish_classif.data_ingestion import observation, api
-from config import Config
+from jellyfish_classif.config import Config
 
 download_config = Config().download
 
