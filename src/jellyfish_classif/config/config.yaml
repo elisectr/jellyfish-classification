@@ -1,0 +1,27 @@
+dataset:
+  img_size: 224
+  batch_size: 16
+  seed: 42
+
+model:
+  num_classes: 5
+  input_shape: [224, 224, 3]
+  dropout_rate: 0.3
+  fine_tune_layers: 30
+  optimizer: "adam"
+  learning_rate: 0.001
+
+training:
+  epochs: 100
+  early_stopping_patience: 8
+  checkpoint_monitor: "val_accuracy"
+  checkpoint_mode: "max"
+  save_best_only: true
+  verbose: 1
+  output_dir: "outputs"
+
+download:
+  max_images_per_species: 1000
+  per_page: 50
+  api_sleep_time: 2
+  image_size: "medium"
