@@ -20,9 +20,9 @@ class JellyfishDataset:
         self.config = config
         self.image_paths = None
         self.labels = None
-        self.label_map = None
-        self.class_names: Optional[List[str]] = None
-        self.num_classes: Optional[int] = None
+        self._label_map = None
+        self._class_names: Optional[List[str]] = None
+        self._num_classes: Optional[int] = None
 
         self._load_metadata()
         self.augment = tf.keras.Sequential(
@@ -76,7 +76,6 @@ class JellyfishDataset:
 
         return image, label
 
-    # TODO later : add augmentations
     def _augment_image(self, image: tf.Tensor, label: tf.Tensor):
         image = self.augment(image, training=True)
         return image, label
@@ -94,7 +93,7 @@ class JellyfishDataset:
             y=self.labels,
         )
         class_weights = {int(cls): float(w) for cls, w in zip(classes, weights)}
-        return class_weights  # TODO: objet tf qui fait ça ?
+        return class_weights
 
     def _prepare_dataset(
         self,
@@ -182,15 +181,17 @@ class JellyfishDataset:
 
     # TODO: séparer split et prepare
 
-    # TODO: @property
-    def get_class_names(self) -> List[str]:
-        """Returns class names in index order."""
-        return self.class_names
+    @property
+    def class_names(self) -> List[str]:
+        """Class names in index order."""
+        return self._class_names
 
-    def get_num_classes(self) -> int:
-        """Returns number of classes."""
-        return self.num_classes
+    @property
+    def num_classes(self) -> int:
+        """Number of classes."""
+        return self._num_classes
 
-    def get_label_map(self) -> Dict[str, int]:
-        """Returns mapping of class_name -> index."""
-        return self.label_map
+    @property
+    def label_map(self) -> Dict[str, int]:
+        """Mapping of class_name -> index."""
+        return self._label_map
