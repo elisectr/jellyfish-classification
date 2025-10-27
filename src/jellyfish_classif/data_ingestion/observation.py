@@ -1,5 +1,5 @@
 from typing import Dict, Any
-import os
+from pathlib import Path
 import csv
 
 from jellyfish_classif.data_ingestion.utils import download_image
@@ -7,7 +7,7 @@ from jellyfish_classif.data_ingestion.utils import download_image
 
 def process_observation(
     obs: Dict[str, Any],
-    species_dir: str,
+    species_dir: Path,
     writer: csv.writer,
     species_info: Dict[str, str],
     downloaded: int,
@@ -18,11 +18,12 @@ def process_observation(
 
     Args:
         obs (Dict[str, Any]): Observation dictionary from iNaturalist API
-        species_dir (str): Directory to save images for the species
+        species_dir (Path): Directory to save images for the species
         writer (csv.writer): CSV writer object
         species_info (Dict[str, str]): Species information dictionary
         downloaded (int): Current count of downloaded images
         max_images (int): Maximum number of images to download for the species
+        image_size (str): Requested image size (e.g. "medium", "large")
 
     Returns:
         int: Updated count of downloaded images
@@ -38,9 +39,9 @@ def process_observation(
             continue
 
         filename = f"{obs_id}_{i}.jpg"
-        filepath = os.path.join(species_dir, filename)
+        filepath = species_dir / filename
 
-        if os.path.exists(filepath):
+        if filepath.exists():
             continue  # Skip if already downloaded
         elif download_image(img_url, filepath):
             writer.writerow(

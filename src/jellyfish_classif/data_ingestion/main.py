@@ -1,14 +1,14 @@
 from typing import Dict, Any
-import os
+from pathlib import Path
 import csv
 from time import sleep
 from tqdm import tqdm
 
 
 from jellyfish_classif.data_ingestion import observation, api, utils
-from config import DownloadConfig  # TODO: gérer les imports
+from config import Config
 
-download_config = DownloadConfig()
+download_config = Config().download()
 
 
 def download_species_images(species: Dict[str, Any], writer: csv.writer) -> None:
@@ -24,8 +24,8 @@ def download_species_images(species: Dict[str, Any], writer: csv.writer) -> None
 
     print(f"\n🔍 {sci_name} ({common_name})")
 
-    species_dir = os.path.join("data/images", sci_name.replace(" ", "_"))
-    os.makedirs(species_dir, exist_ok=True)
+    species_dir = Path("data/images") / sci_name.replace(" ", "_")
+    species_dir.mkdir(parents=True, exist_ok=True)
 
     downloaded = 0
     page = 1
@@ -64,9 +64,15 @@ def download_species_images(species: Dict[str, Any], writer: csv.writer) -> None
 
 def download_all_species() -> None:
     """Downloads images for all species listed in the species JSON file and writes CSV metadata file."""
-    species_list = utils.load_species_list("data/metadata/species.json")
-    os.makedirs("data/images", exist_ok=True)
-    writer, csvfile = utils.create_csv_writer("data/metadata/jellyfish_dataset.csv")
+
+    metadata_dir = Path("data/metadata")
+    images_dir = Path("data/images")
+
+    species_list = utils.load_species_list(metadata_dir / "species.json")
+    images_dir.mkdir(parents=True, exist_ok=True)
+
+    csv_path = metadata_dir / "jellyfish_dataset.csv"
+    writer, csvfile = utils.create_csv_writer(csv_path)
 
     for species in tqdm(species_list, desc="Espèces"):
         download_species_images(
