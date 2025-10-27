@@ -1,7 +1,6 @@
 from typing import Dict, List, Optional, Tuple
 import tensorflow as tf
 from tensorflow.keras import layers
-import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
 import numpy as np
@@ -13,18 +12,18 @@ class JellyfishDataset:
 
     def __init__(
         self,
-        csv_path: str,
+        root_dir: str,
         config,
     ):
-        self.csv_path = Path(csv_path)
+        self.root_dir = Path(root_dir)
         self.config = config
-        self.image_paths = None
-        self.labels = None
+        self.image_paths: List[Path] = []
+        self.labels: List[int] = []
         self._label_map = None
         self._class_names: Optional[List[str]] = None
         self._num_classes: Optional[int] = None
 
-        self._load_metadata()
+        self._load_from_directory()
         self.augment = tf.keras.Sequential(
             [
                 layers.RandomFlip(mode="horizontal_and_vertical"),
@@ -38,24 +37,30 @@ class JellyfishDataset:
             name="jellyfish_augment",
         )
 
-    def _load_metadata(self):
-        """Loads image paths and labels from CSV and creates label->index mapping"""
+    def _load_from_directory(self)-> None:
+        """Scan directory structure and load image paths and labels."""
 
-        df = pd.read_csv(self.csv_path)
+        assert self.root_dir.exists(), f"Dataset directory not found: {self.root_dir}"
 
-        # Ensure required columns exist
+        # Each subfolder = one class
+        self._class_names = sorted(
+            [d.name for d in self.root_dir.iterdir() if d.is_dir()]
+        )
+        self._label_map = {name: idx for idx, name in enumerate(self._class_names)}
+        self._num_classes = len(self._class_names)
+
+
+        # Collect all image paths + labels
+        for class_name in self._class_names:
+            class_dir = self.root_dir / class_name
+            for img_path in class_dir.rglob("*"):
+                if img_path.suffix.lower() in {".jpg", ".jpeg", ".png"}:
+                    self.image_paths.append(img_path)
+                    self.labels.append(self._label_map[class_name])
+
         assert (
-            "image_path" in df.columns and "species_name" in df.columns
-        ), "CSV must contain 'image_path' and 'species_name'"
-
-        self.image_paths = [Path(p) for p in df["image_path"].values.tolist()]
-        labels_raw = df["species_name"].values
-
-        # Create mapping label->index
-        self.class_names = sorted(set(labels_raw))
-        self.label_map = {name: idx for idx, name in enumerate(self.class_names)}
-        self.num_classes = len(self.class_names)
-        self.labels = [self.label_map[label] for label in labels_raw]
+            len(self.image_paths) > 0
+        ), f"No images found in dataset directory {self.root_dir}"
 
     def _preprocess_image(
         self, image_path: Path, label: int
@@ -134,7 +139,7 @@ class JellyfishDataset:
         dataset = dataset.batch(self.config.batch_size).prefetch(tf.data.AUTOTUNE)
         return dataset
 
-    # TODO: shuffle, Augment ...
+    # TODO: methode pour shuffle, Augment ...
 
     def split_and_prepare(
         self,
