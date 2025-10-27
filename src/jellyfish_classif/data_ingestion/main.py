@@ -8,7 +8,7 @@ from tqdm import tqdm
 from jellyfish_classif.data_ingestion import observation, api, utils
 from config import Config
 
-download_config = Config().download()
+download_config = Config().download
 
 
 def download_species_images(species: Dict[str, Any], writer: csv.writer) -> None:
@@ -68,13 +68,18 @@ def download_all_species() -> None:
     metadata_dir = Path("data/metadata")
     images_dir = Path("data/images")
 
-    species_list = utils.load_species_list(metadata_dir / "species.json")
+    species_list = download_config.species or []
+    if not species_list:
+        print("No taxon defined in config (config.yaml > download.species).")
+        return
+
     images_dir.mkdir(parents=True, exist_ok=True)
+    metadata_dir.mkdir(parents=True, exist_ok=True)
 
     csv_path = metadata_dir / "jellyfish_dataset.csv"
     writer, csvfile = utils.create_csv_writer(csv_path)
 
-    for species in tqdm(species_list, desc="Espèces"):
+    for species in tqdm(species_list, desc="Species"):
         download_species_images(
             species, writer
         )  # TODO: Ok, mais demander au chat comment faire pour éviter de gérer un contexte à l'intérieur d'un utilitaire
