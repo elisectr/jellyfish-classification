@@ -13,7 +13,7 @@ This project implements a classification model using transfer learning from pre-
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/elisectr/jellyfish-classif.git
+git clone https://github.com/elisectr/jellyfish-classification.git
 cd jellyfish_classif
 ```
 
