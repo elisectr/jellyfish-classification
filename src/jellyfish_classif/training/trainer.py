@@ -42,9 +42,7 @@ class Trainer:
         logging.info(f"Trainer initialized for: {self.experiment_name}")
         logging.info(f"Output dir: {self.output_dir}")
 
-    # ==============================================================
-    # === CORE =====================================================
-    # ==============================================================
+    # CORE TRAINING
 
     def train(
         self,
@@ -100,9 +98,7 @@ class Trainer:
 
         return self.history
 
-    # ==============================================================
-    # === LOGGING & METADATA =======================================
-    # ==============================================================
+    # LOGGING, METADATA
 
     def _generate_experiment_name(self) -> str:
         """Generate a unique experiment name."""
@@ -130,24 +126,47 @@ class Trainer:
         file_handler.setFormatter(file_formatter)
         logger.addHandler(file_handler)
 
-    def _save_metadata(self):
+    def _save_metadata(
+        self,
+    ):
         """Save experiment metadata."""
+
+        # Compute stats
+        total_params = int(self.model.count_params())
+        trainable_params = int(
+            sum(tf.keras.backend.count_params(w) for w in self.model.trainable_weights)
+        )
+        non_trainable_params = total_params - trainable_params
+
         metadata = {
-            "experiment_name": self.experiment_name,
-            "model_name": self.model.name,
-            "timestamp": datetime.now().isoformat(),
-            "config": {
-                "epochs": self.config.epochs,
-                "early_stopping_patience": self.config.early_stopping_patience,
-            },
-            "model_config": {
-                "total_params": int(self.model.count_params()),
-                "trainable_params": int(
-                    sum(
-                        tf.keras.backend.count_params(w)
-                        for w in self.model.trainable_weights
-                    )
+            "experiment": {
+                "name": self.experiment_name,
+                "timestamp": datetime.now().isoformat(),
+                "device": (
+                    tf.config.list_physical_devices("GPU")[0].name
+                    if tf.config.list_physical_devices("GPU")
+                    else "CPU"
                 ),
+            },
+            "model": {
+                "architecture": self.model.name,
+                "input_shape": list(self.model.input_shape[1:]),
+                "num_classes": getattr(self.config, "num_classes", None),
+                "trainable_layers": sum(
+                    1 for layer in self.model.layers if layer.trainable
+                ),
+                "total_params": total_params,
+                "trainable_params": trainable_params,
+                "non_trainable_params": non_trainable_params,
+            },
+            "training": {
+                "optimizer": type(self.model.optimizer).__name__,
+                "learning_rate": float(
+                    tf.keras.backend.get_value(self.model.optimizer.learning_rate)
+                ),
+                "loss_function": self.config.loss_function,
+                "metrics": self.config.metrics,
+                "early_stopping_patience": self.config.early_stopping_patience,
             },
         }
 
@@ -155,11 +174,9 @@ class Trainer:
         with open(metadata_path, "w") as f:
             json.dump(metadata, f, indent=2)
 
-        logging.info(f"Saved metadata to : {metadata_path}")
+        logging.info(f"🧾 Saved metadata to {metadata_path}")
 
-    # ==============================================================
-    # === CALLBACKS, POST PROC =====================================
-    # ==============================================================
+    # CALLBACKS, POST PROCESSING
 
     def _setup_callbacks(self) -> List[tf.keras.callbacks.Callback]:
         """Setup training callbacks."""
@@ -203,7 +220,7 @@ class Trainer:
 
         return callbacks
 
-    def _post_training(self):  # TODO: laisser user choisir
+    def _post_training(self):
         """After training: save model, plots, metrics."""
         # Save final model
         final_model_path = self.output_dir / "final_model.keras"
@@ -216,9 +233,7 @@ class Trainer:
         # Log final metrics
         self._log_final_metrics()
 
-    # ==============================================================
-    # === VISUALS & METRICS ========================================
-    # ==============================================================
+    # VISUALS AND METRICS
 
     def _plot_training_curves(self):
         """Plot and save training curves."""
