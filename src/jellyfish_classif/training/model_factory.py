@@ -57,11 +57,11 @@ class ModelFactory:
             )
 
         # Create base model
-        base_model = self._create_base_model(model_name)
+        base_model = self._load_backbone(model_name)
         base_model.trainable = False
 
         # Build full model
-        model = self._build_full_model(model_name, base_model)
+        model = self._assemble_model(model_name, base_model)
 
         return model
 
@@ -95,7 +95,7 @@ class ModelFactory:
     # === INTERNAL BUILDING BLOCKS ==================================
     # ===============================================================
 
-    def _create_base_model(
+    def _load_backbone(
         self,
         model_name: str,
     ) -> tf.keras.Model:
@@ -110,17 +110,6 @@ class ModelFactory:
 
         return base_model
 
-    # def _configure_finetuning(self, base_model: tf.keras.Model):
-    #     """Setup fine-tuning by freezing layers."""
-    #     base_model.trainable = True
-
-    #     # Freeze all layers except last fine_tune_layers layers
-    #     total_layers = len(base_model.layers)
-    #     freeze_until = max(0, total_layers - self.config.fine_tune_layers)
-
-    #     for i, layer in enumerate(base_model.layers):
-    #         layer.trainable = i >= freeze_until
-
     def _add_classification_head(self, x: tf.Tensor) -> tf.Tensor:
         """Add the top layers for classification (head)."""
         x = tf.keras.layers.GlobalAveragePooling2D()(x)
@@ -130,7 +119,7 @@ class ModelFactory:
         )
         return outputs
 
-    def _build_full_model(
+    def _assemble_model(
         self, model_name: str, base_model: tf.keras.Model
     ) -> tf.keras.Model:
         """Build the complete model: preprocessing + base + head."""
@@ -141,7 +130,7 @@ class ModelFactory:
         x = preprocess_fn(inputs)
 
         # Base model
-        x = base_model(x, training=False)
+        x = base_model(x)
 
         # Classification head
         outputs = self._add_classification_head(x)
