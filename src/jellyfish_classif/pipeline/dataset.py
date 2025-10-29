@@ -160,8 +160,6 @@ class JellyfishDataset:
         dataset = dataset.batch(self.config.batch_size).prefetch(tf.data.AUTOTUNE)
         return dataset
 
-    # TODO: methode pour shuffle, Augment ...
-
     # ============================================================
     # === SPLITTING ==============================================
     # ============================================================
@@ -193,8 +191,6 @@ class JellyfishDataset:
             random_state=self.config.seed,
         )
         return X_train, X_val, X_test, y_train, y_val, y_test
-
-    # TODO: séparer split et prepare
 
     # ============================================================
     # === PROPERTIES =============================================
