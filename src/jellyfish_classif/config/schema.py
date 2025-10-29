@@ -23,13 +23,10 @@ class ModelConfig:
 
 @dataclass
 class TrainingConfig:
-    epochs: int = 100
     early_stopping_patience: int = 8
     checkpoint_monitor: str = "val_accuracy"
     checkpoint_mode: str = "max"
-    save_best_only: bool = True
     verbose: int = 1
-    output_dir: str = "outputs"
 
 
 @dataclass
