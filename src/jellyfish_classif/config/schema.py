@@ -17,6 +17,8 @@ class ModelConfig:
     fine_tune_layers: int = 30
     optimizer: str = "adam"
     learning_rate: float = 0.001
+    loss_function: str = "sparse_categorical_crossentropy"
+    metrics: List[str] = None
 
 
 @dataclass

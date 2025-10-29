@@ -6,13 +6,16 @@ dataset:
 model:
   num_classes: 5
   input_shape: [224, 224, 3]
-  dropout_rate: 0.3
-  fine_tune_layers: 30
+  dropout_rate: 0.5
+  fine_tune_layers: 5
   optimizer: "adam"
-  learning_rate: 0.001
+  learning_rate: 0.0001
+  loss_function: "sparse_categorical_crossentropy"
+  metrics:
+    - "accuracy"
 
 training:
-  epochs: 100
+  epochs: 10
   early_stopping_patience: 8
   checkpoint_monitor: "val_accuracy"
   checkpoint_mode: "max"
