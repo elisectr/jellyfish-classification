@@ -2,9 +2,13 @@ from typing import Dict, List, Optional, Tuple
 import tensorflow as tf
 from tensorflow.keras import layers
 from sklearn.model_selection import train_test_split
-from sklearn.utils.class_weight import compute_class_weight
 import numpy as np
 from pathlib import Path
+
+from jellyfish_classif.config.schema import DatasetConfig
+from jellyfish_classif.config import Config
+
+dataset_config = Config().dataset
 
 
 class JellyfishDataset:
@@ -13,7 +17,7 @@ class JellyfishDataset:
     def __init__(
         self,
         root_dir: str,
-        config,
+        config: DatasetConfig = dataset_config,
     ):
         self.root_dir = Path(root_dir)
         self.config = config
@@ -22,22 +26,15 @@ class JellyfishDataset:
         self._label_map = None
         self._class_names: Optional[List[str]] = None
         self._num_classes: Optional[int] = None
+        self.augment = self._build_augmentation_pipeline()
 
         self._load_from_directory()
-        self.augment = tf.keras.Sequential(
-            [
-                layers.RandomFlip(mode="horizontal_and_vertical"),
-                layers.RandomRotation(factor=0.10, fill_mode="reflect"),  # approx 18°
-                layers.RandomZoom(height_factor=0.10, width_factor=0.10),
-                layers.RandomTranslation(height_factor=0.10, width_factor=0.10),
-                layers.RandomContrast(factor=0.10),
-                layers.Lambda(lambda x: tf.image.random_brightness(x, max_delta=0.15)),
-                layers.Lambda(lambda x: tf.clip_by_value(x, 0.0, 1.0)),
-            ],
-            name="jellyfish_augment",
-        )
 
-    def _load_from_directory(self)-> None:
+    # ============================================================
+    # === INITIALISATION =========================================
+    # ============================================================
+
+    def _load_from_directory(self) -> None:
         """Scan directory structure and load image paths and labels."""
 
         assert self.root_dir.exists(), f"Dataset directory not found: {self.root_dir}"
@@ -49,18 +46,42 @@ class JellyfishDataset:
         self._label_map = {name: idx for idx, name in enumerate(self._class_names)}
         self._num_classes = len(self._class_names)
 
-
         # Collect all image paths + labels
         for class_name in self._class_names:
             class_dir = self.root_dir / class_name
             for img_path in class_dir.rglob("*"):
                 if img_path.suffix.lower() in {".jpg", ".jpeg", ".png"}:
-                    self.image_paths.append(img_path)
+                    self.image_paths.append(img_path.resolve())
                     self.labels.append(self._label_map[class_name])
 
         assert (
             len(self.image_paths) > 0
         ), f"No images found in dataset directory {self.root_dir}"
+
+    # ============================================================
+    # === AUGMENTATION ===========================================
+    # ============================================================
+
+    def _build_augmentation_pipeline(self) -> tf.keras.Sequential:
+        """Builds image augmentation pipeline using Keras layers.
+
+        Returns:
+            tf.keras.Sequential: Augmentation pipeline
+        """
+        augmentation_layers = [
+            layers.RandomFlip(mode="horizontal_and_vertical"),
+            layers.RandomRotation(factor=0.10, fill_mode="reflect"),  # approx 18°
+            layers.RandomZoom(height_factor=0.10, width_factor=0.10),
+            layers.RandomTranslation(height_factor=0.10, width_factor=0.10),
+            layers.RandomContrast(factor=0.10),
+            layers.Lambda(lambda x: tf.image.random_brightness(x, max_delta=0.15)),
+            layers.Lambda(lambda x: tf.clip_by_value(x, 0.0, 1.0)),
+        ]
+        return tf.keras.Sequential(augmentation_layers, name="jellyfish_augment")
+
+    # ============================================================
+    # === PREPROCESSING ==========================================
+    # ============================================================
 
     def _preprocess_image(
         self, image_path: Path, label: int
@@ -74,33 +95,30 @@ class JellyfishDataset:
         Returns:
             Tuple[tf.Tensor, tf.Tensor] : (image tensor, label tensor)
         """
-        image = tf.io.read_file(str(image_path))
-        image = tf.image.decode_jpeg(image, channels=3)
-        image = tf.image.resize(image, [self.config.img_size, self.config.img_size])
-        image = image / 255.0  # Normalisation [0,1]
 
+        def load_and_process(path):
+
+            path = path.numpy().decode()
+
+            img_bytes = tf.io.read_file(path)
+            img = tf.image.decode_jpeg(img_bytes, channels=3)
+
+            img = tf.image.resize(img, [self.config.img_size, self.config.img_size])
+            img = tf.clip_by_value(img / 255.0, 0.0, 1.0)
+            return img
+
+        image = tf.py_function(load_and_process, [image_path], tf.float32)
+        image.set_shape([self.config.img_size, self.config.img_size, 3])
         return image, label
 
     def _augment_image(self, image: tf.Tensor, label: tf.Tensor):
-        image = self.augment(image, training=True)
-        return image, label
+        return self.augment(image, training=True), label
 
-    def compute_class_weights(self) -> Dict[int, float]:
-        """Compute class weights to handle class imbalance.
+    # ============================================================
+    # === DATASET CREATION =======================================
+    # ============================================================
 
-        Returns:
-            Dict[int, float]: Mapping class_index -> weight
-        """
-        classes = np.unique(self.labels)
-        weights = compute_class_weight(
-            class_weight="balanced",
-            classes=classes,
-            y=self.labels,
-        )
-        class_weights = {int(cls): float(w) for cls, w in zip(classes, weights)}
-        return class_weights
-
-    def _prepare_dataset(
+    def to_tf_dataset(
         self,
         image_paths: List[Path],
         labels: List[int],
@@ -119,7 +137,10 @@ class JellyfishDataset:
             tf.data.Dataset : TensorFlow dataset ready for training/eval
         """
         dataset = tf.data.Dataset.from_tensor_slices(
-            ([str(p) for p in image_paths], labels)
+            (
+                tf.convert_to_tensor([str(p) for p in image_paths]),
+                tf.convert_to_tensor(labels),
+            )
         )
 
         if shuffle:
@@ -141,25 +162,20 @@ class JellyfishDataset:
 
     # TODO: methode pour shuffle, Augment ...
 
-    def split_and_prepare(
+    # ============================================================
+    # === SPLITTING ==============================================
+    # ============================================================
+
+    def split(
         self,
         train_ratio: float = 0.75,
         val_ratio: float = 0.15,
         test_ratio: float = 0.1,
-    ) -> Tuple[tf.data.Dataset, tf.data.Dataset, tf.data.Dataset]:
-        """Splits dataset into train/val/test and prepares tf.data.Dataset for each
-
-
-        Args:
-            train_ratio (float, optional): Train split ratio. Defaults to 0.8.
-            val_ratio (float, optional): Validation split ratio. Defaults to 0.1.
-            test_ratio (float, optional): Test split ratio. Defaults to 0.1.
-
-        Returns:
-            Tuple[tf.data.Dataset, tf.data.Dataset, tf.data.Dataset]: (train_ds, val_ds, test_ds)
-        """
-
-        assert train_ratio + val_ratio + test_ratio == 1.0, "Ratios must sum to 1.0"
+    ) -> Tuple[List[Path], List[Path], List[Path], List[int], List[int], List[int]]:
+        """Split the dataset into train/val/test sets only."""
+        assert np.isclose(
+            train_ratio + val_ratio + test_ratio, 1.0
+        ), "Ratios must sum to 1"
 
         X_train, X_temp, y_train, y_temp = train_test_split(
             self.image_paths,
@@ -169,7 +185,6 @@ class JellyfishDataset:
             random_state=self.config.seed,
         )
         val_size = val_ratio / (val_ratio + test_ratio)
-
         X_val, X_test, y_val, y_test = train_test_split(
             X_temp,
             y_temp,
@@ -177,14 +192,13 @@ class JellyfishDataset:
             stratify=y_temp,
             random_state=self.config.seed,
         )
-
-        train_ds = self._prepare_dataset(X_train, y_train, augment=True, shuffle=True)
-        val_ds = self._prepare_dataset(X_val, y_val, augment=False, shuffle=False)
-        test_ds = self._prepare_dataset(X_test, y_test, augment=False, shuffle=False)
-
-        return train_ds, val_ds, test_ds
+        return X_train, X_val, X_test, y_train, y_val, y_test
 
     # TODO: séparer split et prepare
+
+    # ============================================================
+    # === PROPERTIES =============================================
+    # ============================================================
 
     @property
     def class_names(self) -> List[str]:
