@@ -30,9 +30,7 @@ class JellyfishDataset:
 
         self._load_from_directory()
 
-    # ============================================================
-    # === INITIALISATION =========================================
-    # ============================================================
+    # INITIALISATION
 
     def _load_from_directory(self) -> None:
         """Scan directory structure and load image paths and labels."""
@@ -58,9 +56,7 @@ class JellyfishDataset:
             len(self.image_paths) > 0
         ), f"No images found in dataset directory {self.root_dir}"
 
-    # ============================================================
-    # === AUGMENTATION ===========================================
-    # ============================================================
+    # AUGMENTATION
 
     def _build_augmentation_pipeline(self) -> tf.keras.Sequential:
         """Builds image augmentation pipeline using Keras layers.
@@ -79,9 +75,7 @@ class JellyfishDataset:
         ]
         return tf.keras.Sequential(augmentation_layers, name="jellyfish_augment")
 
-    # ============================================================
-    # === PREPROCESSING ==========================================
-    # ============================================================
+    # PREPROCESSING
 
     def _preprocess_image(
         self, image_path: Path, label: int
@@ -114,9 +108,7 @@ class JellyfishDataset:
     def _augment_image(self, image: tf.Tensor, label: tf.Tensor):
         return self.augment(image, training=True), label
 
-    # ============================================================
-    # === DATASET CREATION =======================================
-    # ============================================================
+    # DATASET CREATION
 
     def to_tf_dataset(
         self,
@@ -160,9 +152,7 @@ class JellyfishDataset:
         dataset = dataset.batch(self.config.batch_size).prefetch(tf.data.AUTOTUNE)
         return dataset
 
-    # ============================================================
-    # === SPLITTING ==============================================
-    # ============================================================
+    # SPLITTING
 
     def split(
         self,
@@ -192,9 +182,7 @@ class JellyfishDataset:
         )
         return X_train, X_val, X_test, y_train, y_val, y_test
 
-    # ============================================================
-    # === PROPERTIES =============================================
-    # ============================================================
+    # PROPERTIES
 
     @property
     def class_names(self) -> List[str]:
