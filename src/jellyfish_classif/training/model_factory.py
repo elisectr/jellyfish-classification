@@ -10,10 +10,6 @@ model_config = Config().model
 class ModelFactory:
     """Factory to create transfer learning models."""
 
-    # ===============================================================
-    # === AVAILABLE ARCHITECTURES ===================================
-    # ===============================================================
-
     # Available architectures
     _MODELS: Dict[str, Callable] = {
         "ResNet50": tf.keras.applications.ResNet50,
@@ -35,9 +31,7 @@ class ModelFactory:
     def __init__(self, config: ModelConfig = model_config):
         self.config = config
 
-    # ===============================================================
-    # === PUBLIC ====================================================
-    # ===============================================================
+    # PUBLIC
 
     def create_model(self, model_name: str) -> tf.keras.Model:
         """Create and return a Keras model based on the specified architecture :
@@ -91,9 +85,7 @@ class ModelFactory:
         for i, layer in enumerate(base_model.layers):
             layer.trainable = i >= freeze_until
 
-    # ===============================================================
-    # === INTERNAL BUILDING BLOCKS ==================================
-    # ===============================================================
+    # INTERNAL BUILDING BLOCKS
 
     def _load_backbone(
         self,
@@ -139,9 +131,7 @@ class ModelFactory:
         model = tf.keras.Model(inputs, outputs, name=model_name)
         return model
 
-    # ===============================================================
-    # === PROPERTIES ================================================
-    # ===============================================================
+    # PROPERTIES
 
     @property
     def is_compiled(self) -> bool:
